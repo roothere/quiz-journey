@@ -1,0 +1,134 @@
+/* Palette follows the game: night-sky navy, map-node gold/blue/grey, black question cards. */
+html, body { width: 100%; height: 100%; margin: 0; overflow: hidden; background: #110f29; }
+body { user-select: none; -webkit-user-select: none; overscroll-behavior: none; }
+#unity-canvas { display: block; width: 100%; height: 100%; background: #110f29; outline: none; }
+
+/* The hidden attribute must always win over the flex layout below. */
+[hidden] { display: none !important; }
+
+#loading, #error { position: fixed; inset: 0; align-items: center; justify-content: center; flex-direction: column; }
+
+/* ---------- Startup loader ---------- */
+#loading {
+  z-index: 10;
+  display: flex;
+  overflow: hidden;
+  color: #fff;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #110f29;
+  transition: opacity .35s ease, visibility .35s ease;
+}
+#loading.is-done { opacity: 0; visibility: hidden; pointer-events: none; }
+
+#sky { position: absolute; inset: 0; overflow: hidden; pointer-events: none; }
+.star { position: absolute; border-radius: 50%; background: #fff; }
+
+/* Chunky question marks: flat colour, dark outline and a solid drop, like the game's UI. */
+.q {
+  position: absolute;
+  bottom: 0;
+  font-family: "Arial Black", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  font-weight: 900;
+  line-height: 1;
+  opacity: .68;
+  -webkit-text-stroke: 5px #110f29;
+  paint-order: stroke fill;
+  text-shadow: 0 7px 0 rgba(0, 0, 0, .45);
+  will-change: transform;
+  transform: translate3d(0, 25vh, 0) rotate(var(--tilt, 0deg));
+  animation: rise linear infinite;
+}
+@keyframes rise {
+  from { transform: translate3d(0, 25vh, 0) rotate(var(--tilt, 0deg)); }
+  50% { transform: translate3d(0, -45vh, 0) rotate(calc(var(--tilt, 0deg) * -0.5)); }
+  to { transform: translate3d(0, -120vh, 0) rotate(var(--tilt, 0deg)); }
+}
+
+.stage { position: relative; display: flex; flex-direction: column; align-items: center; padding: 24px; }
+
+#brand-logo {
+  display: block;
+  width: min(200px, 42vmin);
+  height: auto;
+  animation: bob 3s ease-in-out infinite;
+}
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+/* Chunky progress bar in the style of the game's buttons: flat gold fill, light top lip. */
+#bar {
+  position: relative;
+  width: min(380px, 78vw);
+  height: 30px;
+  margin-top: 30px;
+  padding: 5px;
+  box-sizing: border-box;
+  border-radius: 999px;
+  background: #07060f;
+  box-shadow: 0 0 0 3px #2c2760, inset 0 3px 0 rgba(0, 0, 0, .5);
+}
+#fill {
+  position: relative;
+  width: 4%;
+  height: 100%;
+  border-radius: 999px;
+  background: #f5c518;
+  box-shadow: inset 0 -4px 0 #d39a00;
+  transition: width .3s ease-out;
+}
+#fill::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  right: 7px;
+  top: 3px;
+  height: 4px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .55);
+}
+
+#status {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  justify-content: center;
+  min-height: 24px;
+  margin-top: 14px;
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, .5);
+}
+#percent { color: #f5c518; font-size: 22px; font-weight: 900; font-variant-numeric: tabular-nums; }
+#loading.is-starting #percent { display: none; }
+
+@media (prefers-reduced-motion: reduce) {
+  .q, #brand-logo { animation: none; }
+  .q { transform: rotate(var(--tilt, 0deg)); }
+}
+
+/* ---------- Load error ---------- */
+#error {
+  z-index: 20;
+  display: none;
+  padding: 24px;
+  box-sizing: border-box;
+  color: #fff;
+  text-align: center;
+  font: 700 20px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  background: #110f29;
+}
+#error p { max-width: 440px; }
+#retry {
+  min-width: 180px;
+  min-height: 52px;
+  border: 0;
+  border-radius: 16px;
+  background: #f5c518;
+  box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .2);
+  color: #3d2c00;
+  font: 800 18px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  cursor: pointer;
+}

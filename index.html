@@ -1,53 +1,181 @@
-<!-- Play on Poki -->
-<!-- Poki regenerates the live HTML from index.json; this file is the local/Inspector
-     equivalent of the official poki-template (wrappers/v3/unity2022). Custom HTML for
-     poki.com belongs in index.json "extra_html". -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="utf-8">
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-	<title>Trivia Quiz - Play on Poki</title>
-	<script>
-	var buildUrl = 'Build';
-	window.config = {
-		loader: 'unity-2020',
-		debug: false,
-		maxRatio: 16 / 9,
-		minRatio: 9 / 16,
-		title: 'Trivia Quiz',
-		thumbnail: 'thumbnail.jpg',
-		numScreenshots: 4,
-		metadata: {
-			"poki_template_version": 1,
-			"background_color": "#231F20",
-			"background_filename": "",
-			"code_filename": "a02d725d325ea4b2e57ec046817f9146.wasm",
-			"company_name": "harootygames",
-			"data_filename": "5708e514e855301a04e2d46e5e40cf2e.data",
-			"decompression_fallback": "",
-			"development_player": "false",
-			"framework_filename": "2555e80c63599610c2b6bbacd1a49dda.framework.js",
-			"height": "600",
-			"loader_filename": "4bb46a66823248ed4192cb95279b7506.loader.js",
-			"memory_filename": "",
-			"product_name": "Trivia Quiz",
-			"product_version": "1.0.0",
-			"splash_screen_style": "Dark",
-			"symbols_filename": "",
-			"unity_version": "6000.4.5f1",
-			"use_data_caching": "true",
-			"use_threads": "false",
-			"use_wasm": "true",
-			"use_webgl_1_0": "false",
-			"use_webgl_2_0": "true",
-			"width": "960"
-		}
-	};
-	</script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>Trivia Quiz</title>
+  <script src="https://game-cdn.poki.com/scripts/v2/poki-sdk.js"></script>
+  <link rel="preload" href="Build/ebe3d01520d3a8a173975920b3a085d4.wasm.unityweb" as="fetch" type="application/wasm" crossorigin>
+  <link rel="preload" href="Build/2555e80c63599610c2b6bbacd1a49dda.framework.js.unityweb" as="fetch" crossorigin>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-	<script>window.addEventListener('keydown',function(e){if(['ArrowDown','ArrowUp',' '].indexOf(e.key)>=0)e.preventDefault();});window.addEventListener('wheel',function(e){e.preventDefault();},{passive:false});</script>
-	<script src="https://game-cdn.poki.com/loaders/v3/master-loader.js"></script>
+  <canvas id="unity-canvas" tabindex="-1"></canvas>
+  <div id="loading" aria-live="polite">
+    <div id="sky" aria-hidden="true"></div>
+    <div class="stage">
+      <img id="brand-logo" src="logo.png" alt="" aria-hidden="true">
+      <div id="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><div id="fill"></div></div>
+      <div id="status"><span id="status-text"></span><span id="percent">0%</span></div>
+    </div>
+  </div>
+  <div id="error" role="alertdialog" aria-modal="true">
+    <p id="message"></p>
+    <button id="retry"></button>
+  </div>
+  <script>
+    const strings = {
+      ru: ["Не удалось загрузить игру. Проверьте соединение и попробуйте ещё раз.", "Повторить", "Загрузка…", "Запуск…"],
+      en: ["The game could not be loaded. Check your connection and try again.", "Retry", "Loading…", "Starting…"],
+      tr: ["Oyun yüklenemedi. Bağlantınızı kontrol edip tekrar deneyin.", "Tekrar dene", "Yükleniyor…", "Başlatılıyor…"],
+      es: ["No se pudo cargar el juego. Comprueba tu conexión e inténtalo de nuevo.", "Reintentar", "Cargando…", "Iniciando…"],
+      "pt-BR": ["Não foi possível carregar o jogo. Verifique sua conexão e tente novamente.", "Tentar novamente", "Carregando…", "Iniciando…"],
+      de: ["Das Spiel konnte nicht geladen werden. Prüfe deine Verbindung und versuche es erneut.", "Erneut versuchen", "Wird geladen…", "Wird gestartet…"],
+      fr: ["Impossible de charger le jeu. Vérifiez votre connexion et réessayez.", "Réessayer", "Chargement…", "Démarrage…"]
+    };
+    const locale = String((navigator.languages && navigator.languages[0]) || navigator.language || "en").toLowerCase();
+    const language = locale.startsWith("ru") ? "ru"
+      : locale.startsWith("tr") ? "tr"
+      : locale.startsWith("es") ? "es"
+      : locale.startsWith("pt") ? "pt-BR"
+      : locale.startsWith("de") ? "de"
+      : locale.startsWith("fr") ? "fr"
+      : "en";
+    document.documentElement.lang = language;
+
+    const canvas = document.querySelector("#unity-canvas");
+    const loading = document.querySelector("#loading");
+    const bar = document.querySelector("#bar");
+    const fill = document.querySelector("#fill");
+    const statusText = document.querySelector("#status-text");
+    const percent = document.querySelector("#percent");
+    const error = document.querySelector("#error");
+    const message = document.querySelector("#message");
+    const retry = document.querySelector("#retry");
+    message.textContent = strings[language][0];
+    retry.textContent = strings[language][1];
+    statusText.textContent = strings[language][2];
+    retry.addEventListener("click", () => window.location.reload());
+
+    (function buildSky() {
+      const sky = document.querySelector("#sky");
+      const still = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      for (let i = 0; i < 48; i++) {
+        const star = document.createElement("i");
+        const size = Math.random() < 0.15 ? 3 : 2;
+        star.className = "star";
+        star.style.cssText = `left:${(Math.random() * 100).toFixed(2)}%;top:${(Math.random() * 100).toFixed(2)}%;` +
+          `width:${size}px;height:${size}px;opacity:${(0.2 + Math.random() * 0.5).toFixed(2)}`;
+        sky.appendChild(star);
+      }
+      // Big chunky question marks in the logo's colours drift up behind the logo.
+      const colors = ["#f5c518", "#3db7f2", "#ff4fa3", "#7ed957", "#ff8a1f", "#a66bff"];
+      const count = window.innerWidth < 640 ? 9 : 14;
+      for (let i = 0; i < count; i++) {
+        const mark = document.createElement("span");
+        const duration = 16 + Math.random() * 14;
+        const size = Math.round((window.innerWidth < 640 ? 54 : 70) + Math.random() * (window.innerWidth < 640 ? 60 : 110));
+        mark.className = "q";
+        mark.textContent = "?";
+        mark.style.color = colors[i % colors.length];
+        mark.style.fontSize = `${size}px`;
+        // spread across the width in lanes, never clipped by the side edges
+        const lane = (i * 0.618034) % 1;
+        const free = Math.max(0, window.innerWidth - size * 0.75);
+        mark.style.left = `${Math.round(lane * free)}px`;
+        mark.style.setProperty("--tilt", `${(Math.random() * 40 - 20).toFixed(1)}deg`);
+        mark.style.animationDuration = `${duration.toFixed(1)}s`;
+        mark.style.animationDelay = `${(-Math.random() * duration).toFixed(1)}s`;
+        if (still) mark.style.bottom = `${(Math.random() * 85).toFixed(1)}%`;
+        sky.appendChild(mark);
+      }
+    })();
+
+    let shownProgress = 0;
+    function setProgress(value) {
+      // Unity can report progress out of order; the bar must never move backwards.
+      const pct = Math.max(shownProgress, Math.min(100, Math.round((Number(value) || 0) * 100)));
+      shownProgress = pct;
+      fill.style.width = `${Math.max(4, pct)}%`;
+      percent.textContent = `${pct}%`;
+      bar.setAttribute("aria-valuenow", String(pct));
+    }
+
+    function removeLoader() {
+      // Inline display wins over every stylesheet rule, so the overlay can never
+      // stay on top of gameplay even if the CSS is changed later.
+      loading.hidden = true;
+      loading.style.display = "none";
+    }
+
+    let loaderDismissed = false;
+    function dismissLoader() {
+      if (loaderDismissed) return;
+      loaderDismissed = true;
+      loading.setAttribute("aria-hidden", "true");
+      loading.classList.add("is-done");
+      window.setTimeout(removeLoader, 400);
+      focusGame();
+    }
+    // Called by QuizStartupLoader.jslib once the first playable scene is visible.
+    window.QuizDismissStartupLoader = dismissLoader;
+
+    function fail(reason) {
+      console.error(reason);
+      loaderDismissed = true;
+      removeLoader();
+      error.style.display = "flex";
+      retry.focus();
+    }
+
+    // Unity shows a blocking alert for every uncaught page error. Ad SDK and portal
+    // scripts are cross-origin ("Script error.") and are not failures of the game;
+    // log them instead. Errors raised by our own Build/ files keep Unity's handling.
+    function isUnityError(text, filename) {
+      return /\/Build\//.test(String(filename || "")) ||
+        /\.(framework\.js|wasm|loader\.js)/.test(String(text || ""));
+    }
+    function handleUnityError(text, filename, lineno) {
+      if (isUnityError(text, filename)) return false;
+      console.warn("[QZ-SHELL] Ignored non-game page error:", text, filename || "", lineno || "");
+      return true;
+    }
+
+    function focusGame() { window.focus(); canvas.focus(); }
+    window.addEventListener("pointerdown", focusGame);
+    window.addEventListener("touchstart", focusGame);
+    window.addEventListener("wheel", event => event.preventDefault(), { passive: false });
+    window.addEventListener("touchmove", event => event.preventDefault(), { passive: false });
+    document.addEventListener("contextmenu", event => event.preventDefault());
+
+    const buildUrl = "Build";
+    const config = {
+      dataUrl: buildUrl + "/49a09b9c08a71678fa63d0d97c41acb8.data.unityweb",
+      frameworkUrl: buildUrl + "/2555e80c63599610c2b6bbacd1a49dda.framework.js.unityweb",
+      codeUrl: buildUrl + "/ebe3d01520d3a8a173975920b3a085d4.wasm.unityweb",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "harootygames",
+      productName: "Trivia Quiz",
+      productVersion: "1.0.0",
+      errorHandler: handleUnityError
+    };
+    const loader = document.createElement("script");
+    loader.src = buildUrl + "/4ac54f7979bdd5349014e0b7182d11ec.loader.js";
+    loader.onload = () => createUnityInstance(canvas, config, progress => {
+      setProgress(progress);
+    }).then(instance => {
+      window.unityInstance = instance;
+      setProgress(1);
+      if (!loaderDismissed) {
+        loading.classList.add("is-starting");
+        statusText.textContent = strings[language][3];
+      }
+      // Keep the branded loader over Unity's boot scene until the game reports its
+      // first playable screen; never leave it stuck if that signal is missed.
+      window.setTimeout(dismissLoader, 20000);
+    }).catch(fail);
+    loader.onerror = () => fail("Unity loader script failed to load.");
+    document.body.appendChild(loader);
+  </script>
 </body>
 </html>
